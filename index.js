@@ -77,3 +77,6 @@ const verifyRole = (...allowedRoles) => {
     };
 };
 
+app.get("/", (req, res) => {
+    res.send("LifeFlow API is running!");
+});
