@@ -20,3 +20,24 @@ app.use(
     })
 );
 app.use(express.json());
+
+let cachedClient = null;
+
+async function getDB() {
+    if (cachedClient) {
+        return cachedClient.db("lifeflow");
+    }
+
+    const client = new MongoClient(uri, {
+        serverApi: {
+            version: ServerApiVersion.v1,
+            strict: true,
+            deprecationErrors: true,
+        },
+    });
+
+    await client.connect();
+    cachedClient = client;
+    console.log("Connected to MongoDB!");
+    return client.db("lifeflow");
+}
