@@ -236,3 +236,28 @@ app.patch("/admin/requests/:requestId", logger, verifyToken, verifyRole("admin")
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+
+app.get("/admin/profile/:userId", logger, verifyToken, verifyRole("admin"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { userId } = req.params;
+
+        if (userId !== req.user.sub) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        const result = await db
+            .collection("users")
+            .findOne({ _id: new ObjectId(userId) }, { projection: { password: 0 } });
+
+        if (!result) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /admin/profile/:userId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
