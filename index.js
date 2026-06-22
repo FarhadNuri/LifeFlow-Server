@@ -208,3 +208,31 @@ app.get("/admin/requests", logger, verifyToken, verifyRole("admin"), async (req,
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.patch("/admin/requests/:requestId", logger, verifyToken, verifyRole("admin"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { requestId } = req.params;
+        const { status } = req.body;
+
+        if (!ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .updateOne(
+                { _id: new ObjectId(requestId) },
+                { $set: { status, updatedAt: new Date() } }
+            );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: "Request not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("PATCH /admin/requests/:requestId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
