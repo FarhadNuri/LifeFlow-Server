@@ -261,3 +261,26 @@ app.get("/admin/profile/:userId", logger, verifyToken, verifyRole("admin"), asyn
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.post("/donor/requests", logger, verifyToken, verifyRole("donor"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const requestData = req.body;
+
+        const newRequest = {
+            ...requestData,
+            donorId: req.user.sub,
+            donorEmail: req.user.email,
+            donorName: req.user.name,
+            status: "Pending",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+
+        const result = await db.collection("bloodRequests").insertOne(newRequest);
+        res.send(result);
+    } catch (error) {
+        console.error("POST /donor/requests error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
