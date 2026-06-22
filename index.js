@@ -80,3 +80,30 @@ const verifyRole = (...allowedRoles) => {
 app.get("/", (req, res) => {
     res.send("LifeFlow API is running!");
 });
+
+app.get("/admin/users", logger, verifyToken, verifyRole("admin"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { search, role } = req.query;
+
+        let query = {};
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+            ];
+        }
+        if (role) query.role = role;
+
+        const result = await db
+            .collection("users")
+            .find(query)
+            .project({ password: 0 })
+            .toArray();
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /admin/users error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
