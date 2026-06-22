@@ -284,3 +284,25 @@ app.post("/donor/requests", logger, verifyToken, verifyRole("donor"), async (req
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.get("/donor/my-requests/:userId", logger, verifyToken, verifyRole("donor"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { userId } = req.params;
+
+        if (userId !== req.user.sub) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .find({ donorId: userId })
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /donor/my-requests/:userId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
