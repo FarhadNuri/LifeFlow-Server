@@ -107,3 +107,27 @@ app.get("/admin/users", logger, verifyToken, verifyRole("admin"), async (req, re
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.get("/admin/users/:userId", logger, verifyToken, verifyRole("admin"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { userId } = req.params;
+
+        if (!ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const result = await db
+            .collection("users")
+            .findOne({ _id: new ObjectId(userId) }, { projection: { password: 0 } });
+
+        if (!result) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /admin/users/:userId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
