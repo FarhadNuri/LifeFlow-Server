@@ -185,3 +185,26 @@ app.delete("/admin/users/:userId", logger, verifyToken, verifyRole("admin"), asy
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.get("/admin/requests", logger, verifyToken, verifyRole("admin"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { status, bloodType, urgency } = req.query;
+
+        let query = {};
+        if (status) query.status = status;
+        if (bloodType) query.bloodType = bloodType;
+        if (urgency) query.urgency = urgency;
+
+        const result = await db
+            .collection("bloodRequests")
+            .find(query)
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /admin/requests error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
