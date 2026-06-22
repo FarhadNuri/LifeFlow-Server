@@ -342,3 +342,35 @@ app.patch("/donor/requests/:requestId", logger, verifyToken, verifyRole("donor")
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.delete("/donor/requests/:requestId", logger, verifyToken, verifyRole("donor"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { requestId } = req.params;
+
+        if (!ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        const request = await db
+            .collection("bloodRequests")
+            .findOne({ _id: new ObjectId(requestId) });
+
+        if (!request) {
+            return res.status(404).json({ message: "Request not found" });
+        }
+
+        if (request.donorId !== req.user.sub) {
+            return res.status(403).json({ message: "You can only delete your own requests" });
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .deleteOne({ _id: new ObjectId(requestId) });
+
+        res.send(result);
+    } catch (error) {
+        console.error("DELETE /donor/requests/:requestId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
