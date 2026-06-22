@@ -41,3 +41,39 @@ async function getDB() {
     console.log("Connected to MongoDB!");
     return client.db("lifeflow");
 }
+
+const logger = (req, res, next) => {
+    console.log(`${req.method} | ${req.url}`);
+    next();
+};
+
+const verifyToken = async (req, res, next) => {
+    const { authorization } = req.headers;
+    const token = authorization?.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({ message: "Unauthorized - No token provided" });
+    }
+
+    try {
+        const JWKS = createRemoteJWKSet(
+            new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
+        );
+        const { payload } = await jwtVerify(token, JWKS);
+        req.user = payload;
+        next();
+    } catch (error) {
+        console.error("Token validation failed:", error.message);
+        return res.status(401).json({ message: "Unauthorized - Invalid token" });
+    }
+};
+
+const verifyRole = (...allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user || !allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ message: "Forbidden - Insufficient permissions" });
+        }
+        next();
+    };
+};
+
