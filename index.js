@@ -306,3 +306,39 @@ app.get("/donor/my-requests/:userId", logger, verifyToken, verifyRole("donor"), 
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.patch("/donor/requests/:requestId", logger, verifyToken, verifyRole("donor"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { requestId } = req.params;
+        const { _id, donorId, donorEmail, createdAt, status, ...updateData } = req.body;
+
+        if (!ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        const request = await db
+            .collection("bloodRequests")
+            .findOne({ _id: new ObjectId(requestId) });
+
+        if (!request) {
+            return res.status(404).json({ message: "Request not found" });
+        }
+
+        if (request.donorId !== req.user.sub) {
+            return res.status(403).json({ message: "You can only update your own requests" });
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .updateOne(
+                { _id: new ObjectId(requestId) },
+                { $set: { ...updateData, updatedAt: new Date() } }
+            );
+
+        res.send(result);
+    } catch (error) {
+        console.error("PATCH /donor/requests/:requestId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
