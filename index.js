@@ -161,3 +161,27 @@ app.patch("/admin/users/:userId", logger, verifyToken, verifyRole("admin"), asyn
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.delete("/admin/users/:userId", logger, verifyToken, verifyRole("admin"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { userId } = req.params;
+
+        if (!ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const result = await db
+            .collection("users")
+            .deleteOne({ _id: new ObjectId(userId) });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("DELETE /admin/users/:userId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
