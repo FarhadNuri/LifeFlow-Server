@@ -454,3 +454,59 @@ app.get("/volunteer/requests", logger, verifyToken, verifyRole("volunteer"), asy
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.get("/volunteer/profile/:userId", logger, verifyToken, verifyRole("volunteer"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { userId } = req.params;
+
+        if (userId !== req.user.sub) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        const result = await db
+            .collection("users")
+            .findOne({ _id: new ObjectId(userId) }, { projection: { password: 0 } });
+
+        if (!result) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /volunteer/profile/:userId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.patch("/volunteer/profile/:userId", logger, verifyToken, verifyRole("volunteer"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { userId } = req.params;
+        const { _id, role, email, password, createdAt, ...updateData } = req.body;
+
+        if (userId !== req.user.sub) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        if (!ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const result = await db
+            .collection("users")
+            .updateOne(
+                { _id: new ObjectId(userId) },
+                { $set: { ...updateData, updatedAt: new Date() } }
+            );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("PATCH /volunteer/profile/:userId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
