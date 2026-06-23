@@ -431,3 +431,26 @@ app.patch("/donor/profile/:userId", logger, verifyToken, verifyRole("donor"), as
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.get("/volunteer/requests", logger, verifyToken, verifyRole("volunteer"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { bloodType, urgency, location } = req.query;
+
+        let query = { status: { $ne: "Cancelled" } };
+        if (bloodType) query.bloodType = bloodType;
+        if (urgency) query.urgency = urgency;
+        if (location) query.location = { $regex: location, $options: "i" };
+
+        const result = await db
+            .collection("bloodRequests")
+            .find(query)
+            .sort({ urgency: -1, createdAt: -1 })
+            .toArray();
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /volunteer/requests error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
