@@ -557,3 +557,65 @@ app.post("/volunteer/respond/:requestId", logger, verifyToken, verifyRole("volun
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+app.get("/requests", logger, async (req, res) => {
+    try {
+        const db = await getDB();
+        const { bloodType, urgency, search } = req.query;
+
+        let query = { status: { $in: ["Pending", "In Progress"] } };
+
+        if (bloodType) query.bloodType = bloodType;
+        if (urgency) query.urgency = urgency;
+        if (search) {
+            query.$or = [
+                { patientName: { $regex: search, $options: "i" } },
+                { hospital: { $regex: search, $options: "i" } },
+                { location: { $regex: search, $options: "i" } },
+            ];
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .find(query)
+            .sort({ urgency: -1, createdAt: -1 })
+            .toArray();
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /requests error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.get("/requests/:requestId", logger, async (req, res) => {
+    try {
+        const db = await getDB();
+        const { requestId } = req.params;
+
+        if (!ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .findOne({ _id: new ObjectId(requestId) });
+
+        if (!result) {
+            return res.status(404).json({ message: "Request not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        console.error("GET /requests/:requestId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+if (process.env.NODE_ENV !== "production") {
+    app.listen(port, () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
+}
+
+module.exports = app;
