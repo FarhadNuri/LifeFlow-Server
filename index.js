@@ -510,3 +510,50 @@ app.patch("/volunteer/profile/:userId", logger, verifyToken, verifyRole("volunte
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+
+app.post("/volunteer/respond/:requestId", logger, verifyToken, verifyRole("volunteer"), async (req, res) => {
+    try {
+        const db = await getDB();
+        const { requestId } = req.params;
+        const { message } = req.body;
+
+        if (!ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        const request = await db
+            .collection("bloodRequests")
+            .findOne({ _id: new ObjectId(requestId) });
+
+        if (!request) {
+            return res.status(404).json({ message: "Request not found" });
+        }
+
+        const response = {
+            requestId,
+            volunteerId: req.user.sub,
+            volunteerEmail: req.user.email,
+            volunteerName: req.user.name,
+            message,
+            respondedAt: new Date(),
+        };
+
+        const result = await db.collection("responses").insertOne(response);
+
+        await db
+            .collection("bloodRequests")
+            .updateOne(
+                { _id: new ObjectId(requestId) },
+                {
+                    $set: { status: "In Progress", updatedAt: new Date() },
+                    $inc: { responseCount: 1 }
+                }
+            );
+
+        res.send(result);
+    } catch (error) {
+        console.error("POST /volunteer/respond/:requestId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
