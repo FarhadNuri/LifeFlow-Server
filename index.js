@@ -2,7 +2,6 @@ const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { createRemoteJWKSet, jwtVerify } = require("jose");
 
 dotenv.config();
 
@@ -58,6 +57,7 @@ const verifyToken = async (req, res, next) => {
     }
 
     try {
+        const { jwtVerify } = await import('jose');
         const secret = new TextEncoder().encode(process.env.JWT_SECRET);
         const { payload } = await jwtVerify(token, secret);
         req.user = payload;
