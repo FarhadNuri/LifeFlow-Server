@@ -736,7 +736,7 @@ app.get("/requests", logger, async (req, res) => {
         const db = await getDB();
         const { bloodType, urgency, search } = req.query;
 
-        let query = { status: { $in: ["Pending", "In Progress"] } };
+        let query = { status: "Pending" };
 
         if (bloodType) query.bloodType = bloodType;
         if (urgency) query.urgency = urgency;
@@ -781,6 +781,47 @@ app.get("/requests/:requestId", logger, async (req, res) => {
         res.send(result);
     } catch (error) {
         console.error("GET /requests/:requestId error:", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.patch("/requests/:requestId/donate", logger, verifyToken, async (req, res) => {
+    try {
+        const db = await getDB();
+        const { requestId } = req.params;
+
+        if (!ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        const request = await db
+            .collection("bloodRequests")
+            .findOne({ _id: new ObjectId(requestId) });
+
+        if (!request) {
+            return res.status(404).json({ message: "Request not found" });
+        }
+
+        if (request.status !== "Pending") {
+            return res.status(400).json({ message: "This request is no longer active" });
+        }
+
+        const result = await db
+            .collection("bloodRequests")
+            .updateOne(
+                { _id: new ObjectId(requestId) },
+                { 
+                    $set: { 
+                        status: "In Progress", 
+                        donatedBy: req.decoded.userId,
+                        updatedAt: new Date() 
+                    } 
+                }
+            );
+
+        res.send(result);
+    } catch (error) {
+        console.error("PATCH /requests/:requestId/donate error:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 });
