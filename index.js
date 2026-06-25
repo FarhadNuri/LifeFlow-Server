@@ -14,6 +14,7 @@ const uri = process.env.MONGO_URI;
 app.use(
     cors({
         origin: [
+            "https://life-flow-client-six.vercel.app",
             "https://lifeflow-client.vercel.app",
             "http://localhost:3000",
         ],
