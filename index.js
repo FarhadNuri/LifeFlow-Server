@@ -813,7 +813,7 @@ app.patch("/requests/:requestId/donate", logger, verifyToken, async (req, res) =
                 { 
                     $set: { 
                         status: "In Progress", 
-                        donatedBy: req.decoded.userId,
+                        donatedBy: req.user.sub,
                         updatedAt: new Date() 
                     } 
                 }
